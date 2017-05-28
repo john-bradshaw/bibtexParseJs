@@ -1,6 +1,9 @@
 bibtexParseJs
 =============
-A JavaScript library that parses BibTeX parser. Forked from 
+A JavaScript library that parses BibTeX parser. 
+Forked from https://github.com/ORCID/bibtexParseJs
+
+Forked from 
 [bibtex-parser](https://github.com/mikolalysenko/bibtex-parser).
 
 

@@ -42,14 +42,14 @@
         };
 
         this.isWhitespace = function(s) {
-            return (s == ' ' || s == '\r' || s == '\t' || s == '\n');
+            return (s === ' ' || s === '\r' || s === '\t' || s === '\n');
         };
 
         this.match = function(s, canCommentOut) {
-            if (canCommentOut == undefined || canCommentOut == null)
+            if (canCommentOut === undefined || canCommentOut === null)
                 canCommentOut = true;
             this.skipWhitespace(canCommentOut);
-            if (this.input.substring(this.pos, this.pos + s.length) == s) {
+            if (this.input.substring(this.pos, this.pos + s.length) === s) {
                 this.pos += s.length;
             } else {
                 throw "Token mismatch, expected " + s + ", found "
@@ -72,11 +72,11 @@
 
         /* when search for a match all text can be ignored, not just white space */
         this.matchAt = function() {
-            while (this.input.length > this.pos && this.input[this.pos] != '@') {
+            while (this.input.length > this.pos && this.input[this.pos] !== '@') {
                 this.pos++;
             };
 
-            if (this.input[this.pos] == '@') {
+            if (this.input[this.pos] === '@') {
                 return true;
             };
             return false;
@@ -86,7 +86,7 @@
             while (this.isWhitespace(this.input[this.pos])) {
                 this.pos++;
             };
-            if (this.input[this.pos] == "%" && canCommentOut == true) {
+            if (this.input[this.pos] === "%" && canCommentOut === true) {
                 while (this.input[this.pos] != "\n") {
                     this.pos++;
                 };
@@ -101,7 +101,7 @@
             var escaped = false;
             while (true) {
                 if (!escaped) {
-                    if (this.input[this.pos] == '}') {
+                    if (this.input[this.pos] === '}') {
                         if (bracecount > 0) {
                             bracecount--;
                         } else {
@@ -109,13 +109,13 @@
                             this.match("}", false);
                             return this.input.substring(start, end);
                         };
-                    } else if (this.input[this.pos] == '{') {
+                    } else if (this.input[this.pos] === '{') {
                         bracecount++;
                     } else if (this.pos >= this.input.length - 1) {
                         throw "Unterminated value";
                     };
                 };
-                if (this.input[this.pos] == '\\' && escaped == false)
+                if (this.input[this.pos] === '\\' && escaped === false)
                     escaped = true;
                 else
                     escaped = false;
@@ -126,7 +126,7 @@
         this.value_comment = function() {
             var str = '';
             var brcktCnt = 0;
-            while (!(this.tryMatch("}", false) && brcktCnt == 0)) {
+            while (!(this.tryMatch("}", false) && brcktCnt === 0)) {
                 str = str + this.input[this.pos];
                 if (this.input[this.pos] == '{')
                     brcktCnt++;
@@ -146,7 +146,7 @@
             var escaped = false;
             while (true) {
                 if (!escaped) {
-                    if (this.input[this.pos] == '"') {
+                    if (this.input[this.pos] === '"') {
                         var end = this.pos;
                         this.match('"', false);
                         return this.input.substring(start, end);
@@ -154,7 +154,7 @@
                         throw "Unterminated value:" + this.input.substring(start);
                     };
                 }
-                if (this.input[this.pos] == '\\' && escaped == false)
+                if (this.input[this.pos] === '\\' && escaped === false)
                     escaped = true;
                 else
                     escaped = false;
@@ -199,7 +199,7 @@
                                 // а-яА-Я is Cyrillic
                 //console.log(this.input[this.pos]);
                 if (this.notKey.indexOf(this.input[this.pos]) >= 0) {
-                    if (optional && this.input[this.pos] != ',') {
+                    if (optional && this.input[this.pos] !== ',') {
                         this.pos = start;
                         return null;
                     };
@@ -243,7 +243,7 @@
             this.currentEntry = {};
             this.currentEntry['citationKey'] = this.key(true);
             this.currentEntry['entryType'] = d.substring(1);
-            if (this.currentEntry['citationKey'] != null) {            
+            if (this.currentEntry['citationKey'] !== null) {
                 this.match(",");
             }
             this.key_value_list();
@@ -289,11 +289,11 @@
             while (this.matchAt()) {
                 var d = this.directive();
                 this.match("{");
-                if (d == "@STRING") {
+                if (d === "@STRING") {
                     this.string();
-                } else if (d == "@PREAMBLE") {
+                } else if (d === "@PREAMBLE") {
                     this.preamble();
-                } else if (d == "@COMMENT") {
+                } else if (d === "@COMMENT") {
                     this.comment();
                 } else {
                     this.entry(d);
@@ -304,7 +304,118 @@
             this.alernativeCitationKey();
         };
     };
-    
+
+
+    var bibtexParser = new BibtexParser();
+
+
+    exports.getEntries = function () {
+      return bibtexParser.entries
+    };
+
+
+    //* clears the bibtex parser object */
+    exports.clear = function() {
+        // reset the bibtex parser by creating a new one
+        bibtexParser = new BibtexParser();
+    };
+
+    /* sorts the reference array alphabetically by author */
+    exports.sortAlphabetically = function() {
+        if (bibtexParser.entries.length === 0) {
+            console.log("nothing to sort")
+        }
+        bibtexParser.entries.sort( function(a,b) {
+
+            // if b does not have author say that a is larger
+            var bAuthor = b['entryTags']['author'];
+            if (bAuthor === undefined) {
+                return -1
+            }
+
+            // if a does not have author then say b is larger
+            // if both exist then do the actual comparison
+            if ('author' in a['entryTags'] && a['entryTags']['author'] < bAuthor ) {
+                return -1;
+            } else {
+                return 1
+            }
+
+        })
+    };
+
+    /* gives back author year reference string */
+    exports.citeAuthorYear = function(key, includeBrackets) {
+
+        var newArray = bibtexParser.entries.filter(function (p1, p2, p3) {
+            return p1['citationKey'] === key;
+        });
+
+        if (newArray.length > 1) {
+            throw "repeated citation key";
+        }
+
+        var stringOut = newArray[0]['entryTags']['author'] +', ' + newArray[0]['entryTags']['year']
+        if (includeBrackets){
+            stringOut = '(' + stringOut + ')'
+        }
+        return stringOut
+
+    };
+
+    /* adds bibtex to the object */
+    exports.addBibtex = function (textIn) {
+        bibtexParser.setInput(textIn);
+        bibtexParser.bibtex();
+    };
+
+
+    /* atm prints out in a default style, but later may change this */
+    exports.printOutReferences = function (addBibtexButton) {
+        // current style is:
+        // <author> (<year>) <title>, <journal if exists>, <publisher>,  <copy-bibtex>
+
+        var nice_labels = bibtexParser.entries.map(function (p1, p2, p3) {
+
+            var startString = `${p1['entryTags']['author']} (${p1['entryTags']['year']}) ${p1['entryTags']['title']}`;
+
+
+            // add booktitle if applicable
+            var booktitle = p1['entryTags']['booktitle'];
+            if (booktitle !== undefined){
+                startString += ", " + booktitle;
+            }
+
+
+            // add journal if applicable
+            var journal = p1['entryTags']['journal'];
+            if (journal !== undefined){
+                startString += ", " + journal;
+            }
+
+            // add publisher
+            var publisher = p1['entryTags']['publisher'];
+            if (publisher !== undefined){
+                startString += ", " + publisher;
+            }
+
+
+
+            if (addBibtexButton){
+                var outputBibtex = exports.toBibtex([p1]); // have to wrap it in array to deal with usual format
+                var bibtextLink = `  button(type="button", class="btn btn-link, data-clipboard-text="${outputBibtex}") (copy bibtex)`;
+                startString += bibtextLink;
+            }
+
+            return startString
+        });
+
+        return nice_labels.join(' \n')
+
+
+    };
+
+
     exports.toJSON = function(bibtex) {
         var b = new BibtexParser();
         b.setInput(bibtex);
